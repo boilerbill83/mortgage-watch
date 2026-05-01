@@ -2,7 +2,9 @@ name: Daily Mortgage Rate SMS
 
 on:
   schedule:
-    - cron: '0 14 * * 1-5'
+    # 9:00 AM Chicago Friday (CDT/summer = UTC-5 = 14:00 UTC)
+    # Change to '0 15 * * 5' Nov-Mar when Chicago switches to CST (UTC-6)
+    - cron: '0 14 * * 5'
   workflow_dispatch:
 
 jobs:
@@ -29,6 +31,7 @@ jobs:
       - name: Fetch rates, update history, send SMS
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
           TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
           TWILIO_FROM_NUMBER: ${{ secrets.TWILIO_FROM_NUMBER }}
