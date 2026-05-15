@@ -23,5 +23,14 @@
     "rateFha": "6.37",
     "source30yr": "FRED/Freddie Mac",
     "source5arm": "AI web search"
+  },
+  {
+    "date": "2026-05-14",
+    "rate30yr": "6.36",
+    "rate15yr": "5.71",
+    "rate5arm": "5.67",
+    "rateFha": "6.49",
+    "source30yr": "FRED/Freddie Mac",
+    "source5arm": "AI web search"
   }
 ]
