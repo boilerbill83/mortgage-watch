@@ -36,6 +36,13 @@ jobs:
           TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
           TWILIO_FROM_NUMBER: ${{ secrets.TWILIO_FROM_NUMBER }}
           TWILIO_TO_NUMBER: ${{ secrets.TWILIO_TO_NUMBER }}
+          YOUR_MORTGAGE_RATE: ${{ secrets.YOUR_MORTGAGE_RATE }}
+          LOAN_BALANCE: ${{ secrets.LOAN_BALANCE }}
+          MONTHLY_PI: ${{ secrets.MONTHLY_PI }}
+          PAYMENTS_REMAINING: ${{ secrets.PAYMENTS_REMAINING }}
+          AS_OF_DATE: ${{ secrets.AS_OF_DATE }}
+          REFI_CLOSING_COST_PCT: ${{ secrets.REFI_CLOSING_COST_PCT }}
+          REFI_THRESHOLD_PCT: ${{ secrets.REFI_THRESHOLD_PCT }}
         run: node scripts/fetch-and-notify.js
 
       - name: Commit updated rate history
