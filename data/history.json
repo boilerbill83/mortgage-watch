@@ -86,5 +86,16 @@
     "rateFha": "6.56",
     "source30yr": "FRED/Freddie Mac",
     "source5arm": "AI web search"
+  },
+  {
+    "date": "2026-09-17",
+    "rate30yr": "6.95",
+    "rate15yr": "6.26",
+    "rate5arm": "6.13",
+    "rateFha": "6.51",
+    "source30yr": "FRED/Freddie Mac",
+    "source5arm": "AI web search",
+    "analysis": "The Federal Reserve raised rates by 25 basis points to 3.75%-4.00% on September 16, 2026, the first hike since 2023, signaling inflation remains elevated and keeping mortgage rates under upward pressure. Treasury yields jumped sharply on September 24 with the 10-year reaching 5.121%, pushing mortgage rates higher across all products. Higher oil prices from the Iran conflict are keeping inflation concerns alive and limiting any near-term rate relief.",
+    "outlook": "With the Fed signaling more hikes ahead and rates already at two-year highs, buyers who need to purchase now should consider locking rates rather than waiting for drops that may not materialize through year-end."
   }
 ]
