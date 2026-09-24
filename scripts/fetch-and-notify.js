@@ -18,6 +18,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HISTORY_PATH = path.join(__dirname, '..', 'data', 'history.json');
 
 const FRED_BASE = 'https://api.stlouisfed.org/fred/series/observations';
+const DASHBOARD_URL = 'https://boilerbill83.github.io/mortgage-watch/';
 
 // ── 1. Fetch from FRED API ────────────────────────────────────────────────────
 
@@ -196,13 +197,13 @@ function buildSMS({ obs30, obs15, aiData, refi, mortgageConfig }) {
     `${aiData.analysis}`,
     ``,
     `Outlook: ${aiData.outlook}`,
-    buildRefiBlock(refi, mortgageConfig)
+    buildRefiBlock(refi, mortgageConfig),
+    ``,
+    `Dashboard: ${DASHBOARD_URL}`
   ].join('\n');
 }
 
 // ── 5. Save history ───────────────────────────────────────────────────────────
-// Only the spread/verdict are stored (derived, non-sensitive) — never your
-// balance or dollar savings, so the committed history stays safe to publish.
 
 function saveHistory({ obs30, obs15, aiData, refi, mortgageConfig }) {
   const latest30 = getLatest(obs30);
@@ -227,8 +228,12 @@ function saveHistory({ obs30, obs15, aiData, refi, mortgageConfig }) {
       outlook: aiData.outlook,
       ...(refi ? {
         yourRate: mortgageConfig.yourRate,
+        loanBalance: mortgageConfig.loanBalance,
         refiSpread: +refi.spread.toFixed(3),
         refiVerdict: refi.verdict,
+        refiMonthlySavings: +refi.monthlySavings.toFixed(2),
+        refiBreakevenMonths: refi.breakevenMonths !== null ? Math.round(refi.breakevenMonths) : null,
+        refiClosingCosts: +refi.closingCosts.toFixed(2),
       } : {})
     });
     fs.mkdirSync(path.dirname(HISTORY_PATH), { recursive: true });

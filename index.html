@@ -381,17 +381,27 @@ function renderRefi(entry) {
 
   box.style.display = 'block';
   const spread = entry.refiSpread;
+  const balanceText = entry.loanBalance
+    ? ` on $${Math.round(entry.loanBalance).toLocaleString()} balance`
+    : '';
   const spreadText = spread > 0
-    ? `Market is ${spread.toFixed(2)}% below your ${entry.yourRate}% rate`
-    : `Market is ${Math.abs(spread).toFixed(2)}% at or above your ${entry.yourRate}% rate`;
+    ? `Market is ${spread.toFixed(2)}% below your ${entry.yourRate}% rate${balanceText}`
+    : `Market is ${Math.abs(spread).toFixed(2)}% at or above your ${entry.yourRate}% rate${balanceText}`;
   document.getElementById('refiSpread').textContent = spreadText;
 
   const signalEl = document.getElementById('refiSignal');
   signalEl.className = `signal ${VERDICT_SIGNAL[entry.refiVerdict] || 'neutral'}`;
   signalEl.textContent = VERDICT_LABEL[entry.refiVerdict] || entry.refiVerdict;
 
-  document.getElementById('refiNote').textContent =
-    'Exact balance and dollar savings are sent privately via SMS, not shown here.';
+  const noteEl = document.getElementById('refiNote');
+  if (entry.refiMonthlySavings > 0) {
+    const breakeven = entry.refiBreakevenMonths !== null && entry.refiBreakevenMonths !== undefined
+      ? `${entry.refiBreakevenMonths} mo`
+      : '—';
+    noteEl.textContent = `Est. savings: $${Math.round(entry.refiMonthlySavings)}/mo · breakeven ~${breakeven} on ~$${Math.round(entry.refiClosingCosts).toLocaleString()} closing costs`;
+  } else {
+    noteEl.textContent = 'Refinancing at today\'s rate would not lower your payment.';
+  }
 }
 </script>
 </body>
