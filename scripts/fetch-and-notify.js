@@ -4,7 +4,8 @@
  * 1. Fetches 30yr + 15yr fixed from FRED API (Freddie Mac authoritative data)
  * 2. Fetches 5/1 ARM + FHA + analysis via Anthropic API + web search
  * 3. Computes 7/14/30-day changes from FRED historical data directly
- * 4. Sends SMS via Twilio
+ * 4. Computes refi breakeven against your own loan (from secrets, never committed)
+ * 5. Sends SMS via Twilio
  */
 
 import Anthropic from '@anthropic-ai/sdk';
@@ -102,9 +103,85 @@ Rate values must be numeric strings like "6.81" with no % symbol.`;
   return parsed;
 }
 
-// ── 3. Build SMS ──────────────────────────────────────────────────────────────
+// ── 3. Refi breakeven vs. your own loan ───────────────────────────────────────
+// Loan details come from GitHub Actions secrets, never written to disk or git,
+// so your balance/payment never end up in the (possibly public) repo or Pages site.
 
-function buildSMS({ obs30, obs15, aiData }) {
+function loadMortgageConfig() {
+  const yourRate         = parseFloat(process.env.YOUR_MORTGAGE_RATE);
+  const loanBalance      = parseFloat(process.env.LOAN_BALANCE);
+  const monthlyPI        = parseFloat(process.env.MONTHLY_PI);
+  const paymentsRemaining = parseInt(process.env.PAYMENTS_REMAINING, 10);
+  const asOfDate         = process.env.AS_OF_DATE;
+
+  if (![yourRate, loanBalance, monthlyPI, paymentsRemaining].every(Number.isFinite) || !asOfDate) {
+    return null; // refi tracking is optional; skip quietly if not configured
+  }
+
+  return {
+    yourRate,
+    loanBalance,
+    monthlyPI,
+    paymentsRemaining,
+    asOfDate,
+    closingCostPct: parseFloat(process.env.REFI_CLOSING_COST_PCT || '0.02'),
+    refiThresholdPct: parseFloat(process.env.REFI_THRESHOLD_PCT || '0.75'),
+  };
+}
+
+function monthsBetween(from, to) {
+  return (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
+}
+
+function amortizedPayment(principal, annualRatePct, termMonths) {
+  const r = annualRatePct / 100 / 12;
+  if (r === 0) return principal / termMonths;
+  const growth = Math.pow(1 + r, termMonths);
+  return principal * r * growth / (growth - 1);
+}
+
+function computeRefi(currentRate30yr, config) {
+  const elapsed = monthsBetween(new Date(config.asOfDate), new Date());
+  const remainingMonths = Math.max(config.paymentsRemaining - elapsed, 1);
+
+  const spread = config.yourRate - currentRate30yr; // positive = market is cheaper than you
+  const newPayment = amortizedPayment(config.loanBalance, currentRate30yr, remainingMonths);
+  const monthlySavings = config.monthlyPI - newPayment;
+  const closingCosts = config.loanBalance * config.closingCostPct;
+  const breakevenMonths = monthlySavings > 0 ? closingCosts / monthlySavings : null;
+
+  let verdict;
+  if (spread >= config.refiThresholdPct && breakevenMonths !== null && breakevenMonths <= 36) {
+    verdict = 'worth-it';
+  } else if (spread > 0) {
+    verdict = 'getting-closer';
+  } else {
+    verdict = 'hold';
+  }
+
+  return { spread, verdict, newPayment, monthlySavings, closingCosts, breakevenMonths, remainingMonths };
+}
+
+function buildRefiBlock(refi, config) {
+  if (!refi) return '';
+
+  const verdictText = {
+    'worth-it':      `🎯 Worth checking — market is ${refi.spread.toFixed(2)}% below your ${config.yourRate}%`,
+    'getting-closer': `Getting closer — market is ${refi.spread.toFixed(2)}% below your ${config.yourRate}% (threshold: ${config.refiThresholdPct}%)`,
+    'hold':          `Hold — market is at or above your ${config.yourRate}% rate`,
+  }[refi.verdict];
+
+  const lines = ['', 'Your refi status:', verdictText];
+  if (refi.monthlySavings > 0) {
+    const breakeven = refi.breakevenMonths !== null ? `${Math.round(refi.breakevenMonths)} mo` : '—';
+    lines.push(`Est. savings: $${refi.monthlySavings.toFixed(0)}/mo · breakeven ~${breakeven} on ~$${refi.closingCosts.toFixed(0)} closing costs`);
+  }
+  return lines.join('\n');
+}
+
+// ── 4. Build SMS ──────────────────────────────────────────────────────────────
+
+function buildSMS({ obs30, obs15, aiData, refi, mortgageConfig }) {
   const latest30 = getLatest(obs30);
   const latest15 = getLatest(obs15);
   const rate30 = parseFloat(latest30.value);
@@ -134,13 +211,16 @@ function buildSMS({ obs30, obs15, aiData }) {
     ``,
     `${aiData.analysis}`,
     ``,
-    `Outlook: ${aiData.outlook}`
+    `Outlook: ${aiData.outlook}`,
+    buildRefiBlock(refi, mortgageConfig)
   ].join('\n');
 }
 
-// ── 4. Save history ───────────────────────────────────────────────────────────
+// ── 5. Save history ───────────────────────────────────────────────────────────
+// Only the spread/verdict are stored (derived, non-sensitive) — never your
+// balance or dollar savings, so the committed history stays safe to publish.
 
-function saveHistory({ obs30, obs15, aiData }) {
+function saveHistory({ obs30, obs15, aiData, refi, mortgageConfig }) {
   const latest30 = getLatest(obs30);
   const latest15 = getLatest(obs15);
 
@@ -158,7 +238,14 @@ function saveHistory({ obs30, obs15, aiData }) {
       rate5arm: aiData['5arm'].rate,
       rateFha:  aiData['fha'].rate,
       source30yr: 'FRED/Freddie Mac',
-      source5arm: 'AI web search'
+      source5arm: 'AI web search',
+      analysis: aiData.analysis,
+      outlook: aiData.outlook,
+      ...(refi ? {
+        yourRate: mortgageConfig.yourRate,
+        refiSpread: +refi.spread.toFixed(3),
+        refiVerdict: refi.verdict,
+      } : {})
     });
     fs.mkdirSync(path.dirname(HISTORY_PATH), { recursive: true });
     fs.writeFileSync(HISTORY_PATH, JSON.stringify(history, null, 2));
@@ -168,7 +255,7 @@ function saveHistory({ obs30, obs15, aiData }) {
   }
 }
 
-// ── 5. Send SMS ───────────────────────────────────────────────────────────────
+// ── 6. Send SMS ───────────────────────────────────────────────────────────────
 
 async function sendSMS(message) {
   const client = twilio(
@@ -198,11 +285,19 @@ async function main() {
   const aiData = await fetchAIRates();
   console.log(`5/1 ARM: ${aiData['5arm'].rate}%, FHA: ${aiData['fha'].rate}%`);
 
-  const sms = buildSMS({ obs30, obs15, aiData });
+  const mortgageConfig = loadMortgageConfig();
+  const refi = mortgageConfig ? computeRefi(parseFloat(getLatest(obs30).value), mortgageConfig) : null;
+  if (refi) {
+    console.log(`Refi: spread ${refi.spread.toFixed(2)}%, verdict ${refi.verdict}`);
+  } else {
+    console.log('Refi tracking not configured (set YOUR_MORTGAGE_RATE etc. to enable) — skipping.');
+  }
+
+  const sms = buildSMS({ obs30, obs15, aiData, refi, mortgageConfig });
   console.log('\nSMS preview:\n' + sms);
   console.log('\nCharacter count:', sms.length, '| Segments:', Math.ceil(sms.length / 153));
 
-  saveHistory({ obs30, obs15, aiData });
+  saveHistory({ obs30, obs15, aiData, refi, mortgageConfig });
 
   await sendSMS(sms);
   console.log('Done.');
