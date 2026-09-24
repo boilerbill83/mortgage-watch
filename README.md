@@ -9,6 +9,7 @@ mortgage-watch/
 ├── .github/workflows/main.yml          ← GitHub Action (runs weekly)
 ├── scripts/fetch-and-notify.js         ← main script
 ├── data/history.json                   ← auto-updated rate log
+├── data/mortgage-config.json           ← your loan details (edit by hand)
 ├── index.html                          ← browser dashboard
 └── package.json
 ```
@@ -38,21 +39,33 @@ Add these secrets:
 
 #### Optional: refi tracking
 
-Add these too and every SMS will tell you whether refinancing is worth checking into, with your estimated monthly savings and breakeven period. Pull the numbers from your loan servicer's dashboard (balance, rate, payment).
+Edit `data/mortgage-config.json` with your loan details (pulled from your servicer's dashboard) and every SMS will tell you whether refinancing is worth checking into, with your estimated monthly savings and breakeven period:
 
-| Secret name | Value |
+```json
+{
+  "yourRate": 6.99,
+  "loanBalance": 530125.23,
+  "monthlyPI": 3529.19,
+  "paymentsRemaining": 359,
+  "asOfDate": "2026-09-24",
+  "closingCostPct": 0.02,
+  "refiThresholdPct": 0.75
+}
+```
+
+| Field | Meaning |
 |---|---|
-| `YOUR_MORTGAGE_RATE` | Your locked-in rate, e.g. `6.99` |
-| `LOAN_BALANCE` | Current principal balance, e.g. `530125.23` |
-| `MONTHLY_PI` | Monthly principal + interest only — **exclude escrow/taxes/insurance**, e.g. `3529.19` |
-| `PAYMENTS_REMAINING` | Payments left on the loan, e.g. `359` |
-| `AS_OF_DATE` | Date those numbers are from, e.g. `2026-09-24` |
-| `REFI_CLOSING_COST_PCT` | Optional, default `0.02` (2% of balance) |
-| `REFI_THRESHOLD_PCT` | Optional, default `0.75` (flag once market is this many points below your rate) |
+| `yourRate` | Your locked-in rate |
+| `loanBalance` | Current principal balance |
+| `monthlyPI` | Principal + interest only — **exclude escrow/taxes/insurance** |
+| `paymentsRemaining` | Payments left on the loan |
+| `asOfDate` | Date those numbers are from |
+| `closingCostPct` | Assumed refi closing costs as a fraction of balance (default 2%) |
+| `refiThresholdPct` | Flag a refi once market is this many points below your rate (default 0.75) |
 
-**Update `LOAN_BALANCE`, `MONTHLY_PI`, `PAYMENTS_REMAINING`, and `AS_OF_DATE` whenever you check a new statement** — the script doesn't call your servicer, so accuracy drifts over time between updates. `PAYMENTS_REMAINING` is adjusted automatically for elapsed months between runs, but the balance is a static snapshot.
+**Update `loanBalance`, `monthlyPI`, `paymentsRemaining`, and `asOfDate` whenever you check a new statement** — the script doesn't call your servicer, so accuracy drifts over time between updates. `paymentsRemaining` is adjusted automatically for elapsed months between runs, but the balance is a static snapshot.
 
-These loan details are secrets only — the script never writes your balance or dollar savings to `data/history.json` or the dashboard, only the rate spread and a worth-it/getting-closer/hold verdict, so the repo and any published GitHub Pages site stay safe to share even though they may be public.
+This file is committed to the repo (not a GitHub secret), so it's visible to anyone who can see the repository — including a published GitHub Pages site, if you turn that on. Delete the file (or omit it) to disable refi tracking entirely.
 
 ### 3. Enable GitHub Actions
 

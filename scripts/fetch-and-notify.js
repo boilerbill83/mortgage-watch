@@ -104,29 +104,13 @@ Rate values must be numeric strings like "6.81" with no % symbol.`;
 }
 
 // ── 3. Refi breakeven vs. your own loan ───────────────────────────────────────
-// Loan details come from GitHub Actions secrets, never written to disk or git,
-// so your balance/payment never end up in the (possibly public) repo or Pages site.
+// Loan details live in data/mortgage-config.json, committed to the repo.
+
+const MORTGAGE_CONFIG_PATH = path.join(__dirname, '..', 'data', 'mortgage-config.json');
 
 function loadMortgageConfig() {
-  const yourRate         = parseFloat(process.env.YOUR_MORTGAGE_RATE);
-  const loanBalance      = parseFloat(process.env.LOAN_BALANCE);
-  const monthlyPI        = parseFloat(process.env.MONTHLY_PI);
-  const paymentsRemaining = parseInt(process.env.PAYMENTS_REMAINING, 10);
-  const asOfDate         = process.env.AS_OF_DATE;
-
-  if (![yourRate, loanBalance, monthlyPI, paymentsRemaining].every(Number.isFinite) || !asOfDate) {
-    return null; // refi tracking is optional; skip quietly if not configured
-  }
-
-  return {
-    yourRate,
-    loanBalance,
-    monthlyPI,
-    paymentsRemaining,
-    asOfDate,
-    closingCostPct: parseFloat(process.env.REFI_CLOSING_COST_PCT || '0.02'),
-    refiThresholdPct: parseFloat(process.env.REFI_THRESHOLD_PCT || '0.75'),
-  };
+  if (!fs.existsSync(MORTGAGE_CONFIG_PATH)) return null; // refi tracking is optional
+  return JSON.parse(fs.readFileSync(MORTGAGE_CONFIG_PATH, 'utf8'));
 }
 
 function monthsBetween(from, to) {
