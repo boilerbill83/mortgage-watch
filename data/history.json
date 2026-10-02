@@ -115,5 +115,23 @@
     "refiMonthlySavings": -11.32,
     "refiBreakevenMonths": null,
     "refiClosingCosts": 10602.5
+  },
+  {
+    "date": "2026-10-01",
+    "rate30yr": "7.28",
+    "rate15yr": "6.6",
+    "rate5arm": "6.56",
+    "rateFha": "7.20",
+    "source30yr": "FRED/Freddie Mac",
+    "source5arm": "AI web search",
+    "analysis": "Mortgage rates are hovering near two-year highs as the 10-year Treasury yield climbs above 5.2%, driven by persistent inflation running well above the Fed's 2% target and expectations of a potential rate hike at the October 27-28 FOMC meeting. Despite three Fed rate cuts in late 2025, the market is now pricing in the possibility of tightening as inflation remains stubborn and the labor market stays resilient.",
+    "outlook": "With 67% of experts predicting rates will rise further and the Fed signaling more hikes may be necessary, buyers seeking to lock now should consider doing so before the late-October FOMC meeting, as waiting carries upside risk.",
+    "yourRate": 6.99,
+    "loanBalance": 530125.23,
+    "refiSpread": -0.29,
+    "refiVerdict": "hold",
+    "refiMonthlySavings": -103.64,
+    "refiBreakevenMonths": null,
+    "refiClosingCosts": 10602.5
   }
 ]
