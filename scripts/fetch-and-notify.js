@@ -2,9 +2,10 @@
 /**
  * fetch-and-notify.js
  * 1. Fetches 30yr + 15yr fixed from FRED API (Freddie Mac authoritative data)
- * 2. Fetches 5/1 ARM + FHA + analysis via Anthropic API + web search
+ * 2. Fetches 5/1 ARM + FHA + analysis via Anthropic API + web search (optional —
+ *    SMS still sends with just FRED data + refi status if this fails)
  * 3. Computes 7/14/30-day changes from FRED historical data directly
- * 4. Computes refi breakeven against your own loan (from secrets, never committed)
+ * 4. Computes refi breakeven against your own loan (data/mortgage-config.json)
  * 5. Sends SMS via Twilio
  */
 
@@ -186,21 +187,21 @@ function buildSMS({ obs30, obs15, aiData, refi, mortgageConfig }) {
     ``,
     `30yr fixed: ${rate30.toFixed(2)}%`,
     `15yr fixed: ${rate15.toFixed(2)}%`,
-    `5/1 ARM:    ${aiData['5arm'].rate}%`,
-    `FHA 30yr:   ${aiData['fha'].rate}%`,
+    aiData ? `5/1 ARM:    ${aiData['5arm'].rate}%` : null,
+    aiData ? `FHA 30yr:   ${aiData['fha'].rate}%` : null,
     ``,
     `30yr changes:`,
     `  7d:  ${c7}`,
     `  14d: ${c14}`,
     `  30d: ${c30}`,
     ``,
-    `${aiData.analysis}`,
+    aiData ? aiData.analysis : `(Market analysis unavailable this week — Anthropic API call failed.)`,
     ``,
-    `Outlook: ${aiData.outlook}`,
+    aiData ? `Outlook: ${aiData.outlook}` : null,
     buildRefiBlock(refi, mortgageConfig),
     ``,
     `Dashboard: ${DASHBOARD_URL}`
-  ].join('\n');
+  ].filter(line => line !== null).join('\n');
 }
 
 // ── 5. Save history ───────────────────────────────────────────────────────────
@@ -220,12 +221,12 @@ function saveHistory({ obs30, obs15, aiData, refi, mortgageConfig }) {
       date: latest30.date,
       rate30yr: latest30.value,
       rate15yr: latest15.value,
-      rate5arm: aiData['5arm'].rate,
-      rateFha:  aiData['fha'].rate,
+      rate5arm: aiData ? aiData['5arm'].rate : null,
+      rateFha:  aiData ? aiData['fha'].rate : null,
       source30yr: 'FRED/Freddie Mac',
-      source5arm: 'AI web search',
-      analysis: aiData.analysis,
-      outlook: aiData.outlook,
+      source5arm: aiData ? 'AI web search' : null,
+      analysis: aiData ? aiData.analysis : null,
+      outlook: aiData ? aiData.outlook : null,
       ...(refi ? {
         yourRate: mortgageConfig.yourRate,
         loanBalance: mortgageConfig.loanBalance,
@@ -271,8 +272,13 @@ async function main() {
   console.log(`15yr: ${getLatest(obs15).value}% (survey: ${getLatest(obs15).date})`);
 
   console.log('Fetching ARM/FHA + analysis via Anthropic…');
-  const aiData = await fetchAIRates();
-  console.log(`5/1 ARM: ${aiData['5arm'].rate}%, FHA: ${aiData['fha'].rate}%`);
+  let aiData = null;
+  try {
+    aiData = await fetchAIRates();
+    console.log(`5/1 ARM: ${aiData['5arm'].rate}%, FHA: ${aiData['fha'].rate}%`);
+  } catch (err) {
+    console.error('Anthropic call failed, continuing without ARM/FHA/analysis:', err.message);
+  }
 
   const mortgageConfig = loadMortgageConfig();
   const refi = mortgageConfig ? computeRefi(parseFloat(getLatest(obs30).value), mortgageConfig) : null;

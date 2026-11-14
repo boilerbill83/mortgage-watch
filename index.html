@@ -363,16 +363,16 @@ async function loadRates() {
 function renderRates(entry) {
   document.getElementById('r30').textContent  = `${parseFloat(entry.rate30yr).toFixed(2)}%`;
   document.getElementById('r15').textContent  = `${parseFloat(entry.rate15yr).toFixed(2)}%`;
-  document.getElementById('r5arm').textContent = `${parseFloat(entry.rate5arm).toFixed(2)}%`;
-  document.getElementById('rfha').textContent  = `${parseFloat(entry.rateFha).toFixed(2)}%`;
+  document.getElementById('r5arm').textContent = entry.rate5arm != null ? `${parseFloat(entry.rate5arm).toFixed(2)}%` : '—';
+  document.getElementById('rfha').textContent  = entry.rateFha  != null ? `${parseFloat(entry.rateFha).toFixed(2)}%`  : '—';
   document.getElementById('r30c').textContent  = entry.source30yr || '';
   document.getElementById('r15c').textContent  = entry.source30yr || '';
-  document.getElementById('r5armc').textContent = entry.source5arm || '';
-  document.getElementById('rfhac').textContent  = entry.source5arm || '';
+  document.getElementById('r5armc').textContent = entry.source5arm || 'unavailable this week';
+  document.getElementById('rfhac').textContent  = entry.source5arm || 'unavailable this week';
 
   document.getElementById('analysisContent').innerHTML = entry.analysis
     ? `<p>${entry.analysis}</p>${entry.outlook ? `<p><strong>Outlook:</strong> ${entry.outlook}</p>` : ''}`
-    : `<p style="color:var(--muted);">No analysis recorded for this entry.</p>`;
+    : `<p style="color:var(--muted);">No analysis recorded for this entry (Anthropic call may have failed).</p>`;
 }
 
 function renderRefi(entry) {
