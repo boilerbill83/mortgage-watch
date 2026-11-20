@@ -169,5 +169,23 @@
     "refiMonthlySavings": -45.65,
     "refiBreakevenMonths": null,
     "refiClosingCosts": 10602.5
+  },
+  {
+    "date": "2026-11-19",
+    "rate30yr": "7.28",
+    "rate15yr": "6.66",
+    "rate5arm": null,
+    "rateFha": null,
+    "source30yr": "FRED/Freddie Mac",
+    "source5arm": null,
+    "analysis": null,
+    "outlook": null,
+    "yourRate": 6.99,
+    "loanBalance": 530125.23,
+    "refiSpread": -0.29,
+    "refiVerdict": "hold",
+    "refiMonthlySavings": -106.5,
+    "refiBreakevenMonths": null,
+    "refiClosingCosts": 10602.5
   }
 ]
